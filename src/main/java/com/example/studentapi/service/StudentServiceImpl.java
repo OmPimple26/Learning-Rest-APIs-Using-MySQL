@@ -2,50 +2,55 @@ package com.example.studentapi.service;
 
 import com.example.studentapi.dto.StudentDto;
 import com.example.studentapi.entity.Student;
+import com.example.studentapi.mapper.StudentMapper;
 import com.example.studentapi.repository.StudentRepository;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+public class StudentServiceImpl implements StudentService {
 
-public class StudentServiceImpl implements StudentService{
     private final StudentRepository repo;
 
     @Override
-    public Student createStudent(StudentDto dto) {
-        Student s = new Student();
-        s.setName(dto.getName());
-        s.setEmail(dto.getEmail());
-        s.setMobile(dto.getMobile());
-        s.setDepartment(dto.getDepartment());
-        s.setYear(dto.getYear());
-        return repo.save(s);
+    public StudentDto createStudent(StudentDto dto) {
+        Student student = StudentMapper.toEntity(dto);
+        Student saved = repo.save(student);
+        return StudentMapper.toDto(saved);
     }
 
     @Override
-    public List<Student> getAllStudents() {
-        return repo.findAll();
+    public List<StudentDto> getAllStudents() {
+        return repo.findAll()
+                .stream()
+                .map(StudentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Student getStudentById(int id) {
-        return repo.findById(id)
+    public StudentDto getStudentById(int id) {
+        Student student = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Student Not Found"));
+        return StudentMapper.toDto(student);
     }
 
     @Override
-    public Student updateStudent(int id, StudentDto dto) {
-        Student s = getStudentById(id);
-        s.setName(dto.getName());
-        s.setEmail(dto.getEmail());
-        s.setMobile(dto.getMobile());
-        s.setDepartment(dto.getDepartment());
-        s.setYear(dto.getYear());
-        return repo.save(s);
+    public StudentDto updateStudent(int id, StudentDto dto) {
+        Student student = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student Not Found"));
+
+        student.setName(dto.getName());
+        student.setEmail(dto.getEmail());
+        student.setMobile(dto.getMobile());
+        student.setDepartment(dto.getDepartment());
+        student.setYear(dto.getYear());
+
+        Student updated = repo.save(student);
+        return StudentMapper.toDto(updated);
     }
 
     @Override
@@ -54,17 +59,21 @@ public class StudentServiceImpl implements StudentService{
     }
 
     @Override
-    public List<Student> filterStudents(String department, String year) {
+    public List<StudentDto> filterStudents(String department, String year) {
+
+        List<Student> students;
 
         if (department != null && year != null)
-            return repo.findByDepartmentAndYear(department, year);
-
+            students = repo.findByDepartmentAndYear(department, year);
         else if (department != null)
-            return repo.findByDepartment(department);
-
+            students = repo.findByDepartment(department);
         else if (year != null)
-            return repo.findByYear(year);
+            students = repo.findByYear(year);
+        else
+            students = repo.findAll();
 
-        return repo.findAll();
+        return students.stream()
+                .map(StudentMapper::toDto)
+                .collect(Collectors.toList());
     }
 }
